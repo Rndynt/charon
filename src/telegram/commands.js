@@ -30,6 +30,63 @@ import { consumeNumericFilterInput } from './input.js';
 import { runLearning, sendLessons } from '../learning/commands.js';
 import { fetchWalletPnl } from '../enrichment/wallets.js';
 
+const PROFILE_PRESETS = {
+  conservative: {
+    trading_mode: 'dry_run',
+    config: {
+      min_source_count: 3,
+      require_fee_claim: true,
+      min_fee_claim_sol: 1.5,
+      position_size_sol: 0.05,
+      max_open_positions: 2,
+      llm_min_confidence: 80,
+      tp_percent: 35,
+      sl_percent: -15,
+      trailing_enabled: true,
+      trailing_percent: 12,
+      partial_tp: true,
+      partial_tp_at_percent: 25,
+      partial_tp_sell_percent: 50,
+    },
+  },
+  balanced_profit: {
+    trading_mode: 'confirm',
+    config: {
+      min_source_count: 2,
+      require_fee_claim: true,
+      min_fee_claim_sol: 0.9,
+      position_size_sol: 0.1,
+      max_open_positions: 3,
+      llm_min_confidence: 70,
+      tp_percent: 55,
+      sl_percent: -20,
+      trailing_enabled: true,
+      trailing_percent: 17,
+      partial_tp: true,
+      partial_tp_at_percent: 35,
+      partial_tp_sell_percent: 45,
+    },
+  },
+  aggressive: {
+    trading_mode: 'live',
+    config: {
+      min_source_count: 1,
+      require_fee_claim: false,
+      min_fee_claim_sol: 0,
+      position_size_sol: 0.12,
+      max_open_positions: 4,
+      llm_min_confidence: 60,
+      tp_percent: 80,
+      sl_percent: -25,
+      trailing_enabled: true,
+      trailing_percent: 22,
+      partial_tp: true,
+      partial_tp_at_percent: 45,
+      partial_tp_sell_percent: 35,
+    },
+  },
+};
+
 export async function handleMessage(msg) {
   const text = (msg.text || '').trim();
   const chatId = msg.chat.id;
@@ -75,6 +132,24 @@ export async function handleMessage(msg) {
     }
     updateStrategyConfig(id, newConfig);
     return bot.sendMessage(chatId, `Updated ${id}.${key} = ${value}\n\n${strategyMenuText()}`, { parse_mode: 'HTML' });
+  }
+  if (text.startsWith('/profile')) {
+    const parts = text.split(/\s+/);
+    const profileId = parts[1];
+    const modeArg = parts[2];
+    if (!profileId || profileId === 'list') {
+      const names = Object.keys(PROFILE_PRESETS).map(k => `• <code>${k}</code>`).join('\n');
+      return bot.sendMessage(chatId, [
+        '🧩 <b>Strategy Profiles</b>',
+        names,
+        '',
+        'Usage:',
+        '<code>/profile conservative</code>',
+        '<code>/profile balanced_profit confirm</code>',
+        '<code>/profile aggressive live</code>',
+      ].join('\n'), { parse_mode: 'HTML' });
+    }
+    return applyProfile(chatId, profileId, modeArg);
   }
   if (text.startsWith('/pnl')) return sendPnl(chatId);
   if (text.startsWith('/learn')) {
@@ -255,6 +330,7 @@ export function setupTelegram() {
     { command: 'menu', description: 'Open Charon menu' },
     { command: 'strategy', description: 'Show/switch strategy' },
     { command: 'stratset', description: 'Set strategy config (stratset id key value)' },
+    { command: 'profile', description: 'Switch preset profile (/profile list)' },
     { command: 'positions', description: 'Show dry-run positions' },
     { command: 'candidate', description: 'Show candidate by mint' },
     { command: 'fails', description: 'Top filter failure reasons (/fails 24 8)' },
@@ -308,6 +384,25 @@ async function sendFailureAnalytics(chatId, windowHours = 24, limit = 8) {
     ...lines,
   ].join('\n');
   return bot.sendMessage(chatId, text, { parse_mode: 'HTML' });
+}
+
+async function applyProfile(chatId, profileId, modeOverride = '') {
+  const preset = PROFILE_PRESETS[profileId];
+  if (!preset) return bot.sendMessage(chatId, `Unknown profile: ${profileId}. Try /profile list`);
+  const strategy = activeStrategy();
+  const nextConfig = { ...strategy, ...preset.config };
+  delete nextConfig.id;
+  delete nextConfig.name;
+  updateStrategyConfig(strategy.id, nextConfig);
+  const mode = ['dry_run', 'confirm', 'live'].includes(modeOverride) ? modeOverride : preset.trading_mode;
+  setSetting('trading_mode', mode);
+  return bot.sendMessage(chatId, [
+    `✅ Profile <b>${escapeHtml(profileId)}</b> applied to <b>${escapeHtml(strategy.name)}</b>.`,
+    `Mode: <b>${escapeHtml(mode)}</b>`,
+    `TP/SL: ${nextConfig.tp_percent}% / ${nextConfig.sl_percent}%`,
+    `Size: ${nextConfig.position_size_sol} SOL · Max positions: ${nextConfig.max_open_positions}`,
+    `Min source: ${nextConfig.min_source_count} · LLM min conf: ${nextConfig.llm_min_confidence}%`,
+  ].join('\n'), { parse_mode: 'HTML' });
 }
 
 async function sendMenu(chatId = TELEGRAM_CHAT_ID) {
