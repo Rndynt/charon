@@ -240,6 +240,13 @@ export function initDb() {
     trending_min_swaps: process.env.TRENDING_MIN_SWAPS || '0',
     trending_max_rug_ratio: process.env.TRENDING_MAX_RUG_RATIO || '0.3',
     trending_max_bundler_rate: process.env.TRENDING_MAX_BUNDLER_RATE || '0.5',
+    regime_auto_tune_enabled: process.env.REGIME_AUTO_TUNE_ENABLED || 'true',
+    regime_lookback_ms: process.env.REGIME_LOOKBACK_MS || String(6 * 60 * 60 * 1000),
+    regime_min_closed_positions: process.env.REGIME_MIN_CLOSED_POSITIONS || '4',
+    risk_guard_enabled: process.env.RISK_GUARD_ENABLED || 'true',
+    risk_guard_lookback_ms: process.env.RISK_GUARD_LOOKBACK_MS || String(24 * 60 * 60 * 1000),
+    risk_guard_max_daily_loss_sol: process.env.RISK_GUARD_MAX_DAILY_LOSS_SOL || '0',
+    risk_guard_max_consecutive_losses: process.env.RISK_GUARD_MAX_CONSECUTIVE_LOSSES || '0',
   };
   const insert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   for (const [key, value] of Object.entries(defaults)) insert.run(key, value);

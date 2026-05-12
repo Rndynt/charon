@@ -5,7 +5,7 @@ import { storeDecision, storeBatchDecision, logDecisionEvent } from '../db/decis
 import { buildCandidate, filterCandidate, signalLabel } from './candidateBuilder.js';
 import { decideCandidateBatch } from './llm.js';
 import { activeStrategy } from '../db/settings.js';
-import { createDryRunPosition, createLivePosition, canOpenMorePositions, openPositionCount, tradingMode } from '../db/positions.js';
+import { createDryRunPosition, createLivePosition, canOpenMorePositions, openPositionCount, tradingMode, riskGuardStatus } from '../db/positions.js';
 import { sendBatchReveal, sendTelegram, sendPositionOpen, sendTradeIntent } from '../telegram/send.js';
 import { candidateSummary } from '../telegram/format.js';
 import { createTradeIntent } from '../db/intents.js';
@@ -25,6 +25,11 @@ setCandidateHandler(processCandidateFromSignals);
 export async function processCandidateFromSignals(signals) {
   // Skip if max positions reached — don't waste enrichment/LLM calls
   if (!canOpenMorePositions()) {
+    const risk = riskGuardStatus();
+    if (!risk.allowed) {
+      console.log(`[agent] risk guard active, skipping ${signals.mint.slice(0, 8)}... (${risk.reason})`);
+      return;
+    }
     const max = numSetting('max_open_positions', 3);
     console.log(`[agent] max positions reached (${openPositionCount()}/${max}), skipping ${signals.mint.slice(0, 8)}...`);
     return;
