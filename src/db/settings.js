@@ -31,11 +31,44 @@ export function activeStrategy() {
     if (fallback) return fallback;
     return defaultStrategy();
   }
-  const config = { id: row.id, name: row.name, ...JSON.parse(row.config_json) };
+  const baseConfig = { id: row.id, name: row.name, ...JSON.parse(row.config_json) };
+  const config = applyRegimeTuning(baseConfig);
   strategyCache.id = row.id;
   strategyCache.config = config;
   strategyCache.at = Date.now();
   return config;
+}
+
+function applyRegimeTuning(strategy) {
+  if (!boolSetting('regime_auto_tune_enabled', true)) return strategy;
+  const lookbackMs = Math.max(60_000, numSetting('regime_lookback_ms', 6 * 60 * 60 * 1000));
+  const cutoff = Date.now() - lookbackMs;
+  const stats = db.prepare(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(CASE WHEN pnl_percent > 0 THEN 1 ELSE 0 END) AS wins,
+      AVG(ABS(COALESCE(pnl_percent, 0))) AS avg_abs_pnl
+    FROM dry_run_positions
+    WHERE status = 'closed' AND closed_at_ms >= ?
+  `).get(cutoff);
+  const total = Number(stats?.total || 0);
+  if (total < Math.max(3, numSetting('regime_min_closed_positions', 4))) return strategy;
+  const winRate = total > 0 ? Number(stats?.wins || 0) / total : 0;
+  const volatility = Number(stats?.avg_abs_pnl || 0);
+  const next = { ...strategy };
+
+  if (winRate < 0.35 || volatility >= 35) {
+    next.tp_percent = Math.max(25, Number(strategy.tp_percent || 50) * 0.75);
+    next.sl_percent = Math.min(-12, Number(strategy.sl_percent || -25) * 0.75);
+    next.min_source_count = Math.max(1, Number(strategy.min_source_count || 2) - 1);
+    next.llm_min_confidence = Math.max(45, Number(strategy.llm_min_confidence || 60) - 5);
+    next.position_size_sol = Number(strategy.position_size_sol || 0.1) * 0.8;
+  } else if (winRate > 0.6 && volatility <= 20) {
+    next.tp_percent = Number(strategy.tp_percent || 50) * 1.1;
+    next.sl_percent = Number(strategy.sl_percent || -25) * 0.95;
+    next.llm_min_confidence = Math.min(90, Number(strategy.llm_min_confidence || 60) + 5);
+  }
+  return next;
 }
 
 export function strategyById(id) {

@@ -11,10 +11,38 @@ export function openPositionCount() {
 }
 
 export function canOpenMorePositions() {
+  const risk = riskGuardStatus();
+  if (!risk.allowed) return false;
   const strat = activeStrategy();
   const max = strat.max_open_positions ?? numSetting('max_open_positions', 3);
   if (max <= 0) return true;
   return openPositionCount() < max;
+}
+
+export function riskGuardStatus() {
+  if (!boolSetting('risk_guard_enabled', true)) return { allowed: true, reason: null };
+  const lookbackMs = Math.max(60_000, numSetting('risk_guard_lookback_ms', 24 * 60 * 60 * 1000));
+  const maxDailyLossSol = numSetting('risk_guard_max_daily_loss_sol', 0);
+  const maxConsecutiveLosses = numSetting('risk_guard_max_consecutive_losses', 0);
+  const cutoff = now() - lookbackMs;
+  const rows = db.prepare(`
+    SELECT pnl_sol FROM dry_run_positions
+    WHERE status = 'closed' AND closed_at_ms >= ?
+    ORDER BY closed_at_ms DESC
+  `).all(cutoff);
+  const totalPnlSol = rows.reduce((acc, row) => acc + Number(row.pnl_sol || 0), 0);
+  let consecutiveLosses = 0;
+  for (const row of rows) {
+    if (Number(row.pnl_sol || 0) < 0) consecutiveLosses += 1;
+    else break;
+  }
+  if (maxDailyLossSol > 0 && totalPnlSol <= -Math.abs(maxDailyLossSol)) {
+    return { allowed: false, reason: `daily_loss_limit (${totalPnlSol.toFixed(4)} SOL <= -${Math.abs(maxDailyLossSol)} SOL)` };
+  }
+  if (maxConsecutiveLosses > 0 && consecutiveLosses >= maxConsecutiveLosses) {
+    return { allowed: false, reason: `consecutive_losses_limit (${consecutiveLosses} >= ${maxConsecutiveLosses})` };
+  }
+  return { allowed: true, reason: null, totalPnlSol, consecutiveLosses };
 }
 
 export function tradingMode() {

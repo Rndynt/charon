@@ -33,6 +33,7 @@ import { fetchWalletPnl } from '../enrichment/wallets.js';
 export async function handleMessage(msg) {
   const text = (msg.text || '').trim();
   const chatId = msg.chat.id;
+  if (String(chatId) !== String(TELEGRAM_CHAT_ID)) return;
   if (await consumeNumericFilterInput(chatId, text, msg.message_id)) return;
   if (!text.startsWith('/')) return;
   if (text.startsWith('/menu')) return sendMenu(chatId);
@@ -88,6 +89,12 @@ export async function handleMessage(msg) {
     if (!row) return bot.sendMessage(chatId, 'Candidate not found.');
     return sendCandidate(chatId, row.id);
   }
+  if (text.startsWith('/fails')) {
+    const parts = text.split(/\s+/);
+    const windowHours = Math.max(1, Number(parts[1] || 24));
+    const limit = Math.max(3, Number(parts[2] || 8));
+    return sendFailureAnalytics(chatId, windowHours, limit);
+  }
   if (text.startsWith('/walletadd')) {
     const [, label, address] = text.split(/\s+/);
     if (!label || !address) return bot.sendMessage(chatId, 'Usage: /walletadd <label> <address>');
@@ -134,6 +141,13 @@ export async function handleMessage(msg) {
       'default_sl_percent',
       'default_trailing_enabled',
       'default_trailing_percent',
+      'regime_auto_tune_enabled',
+      'regime_lookback_ms',
+      'regime_min_closed_positions',
+      'risk_guard_enabled',
+      'risk_guard_lookback_ms',
+      'risk_guard_max_daily_loss_sol',
+      'risk_guard_max_consecutive_losses',
     ]);
     if (!valid.has(key) || value == null) {
       return bot.sendMessage(chatId, `Usage: /setfilter &lt;name&gt; &lt;value&gt;\n\n${filtersText()}`, { parse_mode: 'HTML' });
@@ -243,6 +257,7 @@ export function setupTelegram() {
     { command: 'stratset', description: 'Set strategy config (stratset id key value)' },
     { command: 'positions', description: 'Show dry-run positions' },
     { command: 'candidate', description: 'Show candidate by mint' },
+    { command: 'fails', description: 'Top filter failure reasons (/fails 24 8)' },
     { command: 'filters', description: 'Show filters' },
     { command: 'pnl', description: 'Show saved-wallet PnL' },
     { command: 'learn', description: 'Run manual learning report' },
@@ -256,6 +271,43 @@ export function setupTelegram() {
   bot.on('callback_query', query => handleCallback(query).catch(err => console.log(`[callback] ${err.message}`)));
   bot.on('message', msg => handleMessage(msg).catch(err => console.log(`[message] ${err.message}`)));
   bot.on('polling_error', err => console.log(`[telegram] polling ${err.message}`));
+}
+
+async function sendFailureAnalytics(chatId, windowHours = 24, limit = 8) {
+  const cutoff = now() - windowHours * 60 * 60 * 1000;
+  const rows = db.prepare(`
+    SELECT filter_result_json FROM candidates
+    WHERE created_at_ms >= ?
+    ORDER BY id DESC
+    LIMIT 500
+  `).all(cutoff);
+  const reasons = new Map();
+  let filtered = 0;
+  for (const row of rows) {
+    let parsed;
+    try {
+      parsed = JSON.parse(row.filter_result_json);
+    } catch {
+      continue;
+    }
+    if (!parsed || parsed.passed !== false || !Array.isArray(parsed.failures)) continue;
+    filtered += 1;
+    for (const failure of parsed.failures) {
+      reasons.set(failure, (reasons.get(failure) || 0) + 1);
+    }
+  }
+  const top = [...reasons.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+  if (!top.length) {
+    return bot.sendMessage(chatId, `No filter failures found in the last ${windowHours}h.`);
+  }
+  const lines = top.map(([reason, count], idx) => `${idx + 1}. ${escapeHtml(reason)} — ${count}`);
+  const text = [
+    `📉 <b>Filter Failures (${windowHours}h)</b>`,
+    `Filtered candidates: ${filtered}`,
+    '',
+    ...lines,
+  ].join('\n');
+  return bot.sendMessage(chatId, text, { parse_mode: 'HTML' });
 }
 
 async function sendMenu(chatId = TELEGRAM_CHAT_ID) {
