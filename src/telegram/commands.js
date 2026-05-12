@@ -244,9 +244,14 @@ export async function sendCandidate(chatId, id) {
 }
 
 export async function sendPositions(chatId) {
-  const rows = allPositions(12);
-  const text = rows.length ? rows.map(formatPosition).join('\n\n') : 'No dry-run positions yet.';
-  await bot.sendMessage(chatId, `📍 <b>Positions</b>\n\n${text}`, { parse_mode: 'HTML', disable_web_page_preview: true });
+  const rows = allPositions(50);
+  if (!rows.length) return bot.sendMessage(chatId, 'No dry-run positions yet.', { parse_mode: 'HTML' });
+  const open = rows.filter(r => r.status === 'open');
+  const closed = rows.filter(r => r.status === 'closed');
+  const parts = [];
+  if (open.length) parts.push(`🟢 <b>Open Positions</b> (${open.length})`, ...open.map(formatPosition));
+  if (closed.length) parts.push(`🔴 <b>Closed Positions</b> (${closed.length})`, ...closed.map(formatPosition));
+  await bot.sendMessage(chatId, parts.join('\n\n'), { parse_mode: 'HTML', disable_web_page_preview: true });
 }
 
 export async function sendPosition(chatId, id, query = null) {
