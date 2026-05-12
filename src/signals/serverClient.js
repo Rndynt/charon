@@ -20,7 +20,7 @@ function prune(map, ttlMs) {
   }
 }
 
-function signalKey(signal) {
+export function signalKey(signal) {
   const sources = (signal.sources || []).sort().join('+');
   return `${signal.mint}:${sources}`;
 }
@@ -87,7 +87,7 @@ export async function fetchServerSignals() {
         trending.set(mint, trendingToken);
       }
 
-      const key = `signal:${mint}`;
+      const key = `signal:${signalKey(signal)}`;
       if (seenSignals.has(key)) { processed++; continue; }
       seenSignals.set(key, now());
 
