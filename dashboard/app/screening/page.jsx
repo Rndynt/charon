@@ -9,45 +9,43 @@ import { RefreshCw, ExternalLink, Filter, Search, TrendingUp, CheckCircle2, XCir
 import { formatUsd, formatAge, shortMint, solscanUrl } from '@/lib/utils';
 
 function StatusBadge({ status }) {
-  const map = {
-    candidate: 'default',
-    filtered: 'muted',
-    buy: 'success',
-    pass: 'danger',
-    watch: 'warning',
-    open: 'success',
-    closed: 'muted',
-  };
+  const map = { candidate:'default', filtered:'muted', buy:'success', pass:'danger', watch:'warning', open:'success', closed:'muted' };
   return <Badge variant={map[status] ?? 'muted'}>{status}</Badge>;
 }
 
 function FilterResult({ filters }) {
-  if (!filters) return <span className="text-slate-600 text-xs">—</span>;
+  if (!filters) return <span style={{color:'#52525b', fontSize:12}}>—</span>;
   return (
     <div className="flex items-center gap-1">
       {filters.passed
-        ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-        : <XCircle className="h-3.5 w-3.5 text-red-400" />}
+        ? <CheckCircle2 size={13} color="#4ade80" />
+        : <XCircle size={13} color="#f87171" />}
       {filters.reasons?.length > 0 && (
-        <span className="text-xs text-slate-600 truncate max-w-xs">
-          {filters.reasons.slice(0, 2).join(', ')}
-          {filters.reasons.length > 2 && ` +${filters.reasons.length - 2}`}
+        <span className="text-xs truncate max-w-[180px]" style={{color:'#71717a'}}>
+          {filters.reasons[0]}{filters.reasons.length > 1 ? ` +${filters.reasons.length - 1}` : ''}
         </span>
       )}
     </div>
   );
 }
 
-function SignalRouteBadge({ route }) {
+function RouteBadge({ route }) {
   if (!route) return null;
-  const map = {
-    fee_claim: 'default',
-    graduated: 'success',
-    trending: 'warning',
-    signal: 'blue',
-  };
-  return <Badge variant={map[route] ?? 'muted'} className="text-xs">{route.replace(/_/g, ' ')}</Badge>;
+  const map = { fee_claim:'default', fee:'default', graduated:'success', trending:'warning', signal:'blue' };
+  const parts = (route || '').split(' ');
+  return (
+    <div className="flex flex-wrap gap-1">
+      {parts.map((p, i) => <Badge key={i} variant={map[p] ?? 'muted'} className="text-xs">{p.replace(/_/g,' ')}</Badge>)}
+    </div>
+  );
 }
+
+const STAT_ITEMS = [
+  { label:'Total Screened', key:null,         icon:Search,       color:'rgba(139,92,246,0.1)',  iconColor:'#a78bfa' },
+  { label:'Passed Filters', key:'candidate',  icon:CheckCircle2, color:'rgba(34,197,94,0.1)',   iconColor:'#4ade80' },
+  { label:'Filtered Out',   key:'filtered',   icon:XCircle,      color:'rgba(239,68,68,0.1)',   iconColor:'#f87171' },
+  { label:'Bought',         key:'buy',        icon:TrendingUp,   color:'rgba(59,130,246,0.1)',  iconColor:'#60a5fa' },
+];
 
 export default function ScreeningPage() {
   const [data, setData] = useState({ candidates: [], breakdown: [] });
@@ -56,15 +54,11 @@ export default function ScreeningPage() {
   const [expanded, setExpanded] = useState(null);
 
   const fetchData = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true);
-    else setRefreshing(true);
+    if (!quiet) setLoading(true); else setRefreshing(true);
     try {
       const res = await fetch('/api/candidates?limit=80').then(r => r.json());
       setData({ candidates: res.candidates ?? [], breakdown: res.breakdown ?? [] });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    } finally { setLoading(false); setRefreshing(false); }
   }, []);
 
   useEffect(() => {
@@ -74,73 +68,64 @@ export default function ScreeningPage() {
   }, [fetchData]);
 
   const { candidates, breakdown } = data;
-
   const breakdownMap = {};
   for (const b of breakdown) breakdownMap[b.status] = Number(b.count);
   const total24h = Object.values(breakdownMap).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="p-6 space-y-5 max-w-7xl">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between pt-8 lg:pt-0">
         <div>
-          <h1 className="text-lg font-semibold text-slate-100">Screening</h1>
-          <p className="text-xs text-slate-600 mt-0.5">Token pipeline — last 24h</p>
+          <h1 className="text-base font-semibold" style={{color:'#f4f4f8'}}>Screening</h1>
+          <p className="text-xs mt-0.5" style={{color:'#52525b'}}>Token pipeline — last 24h</p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => fetchData(true)} disabled={refreshing}>
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+          <span className="hidden sm:inline">Refresh</span>
         </Button>
       </div>
 
-      {/* Breakdown stats */}
+      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Total Screened', key: null, icon: Search, color: 'text-violet-400 bg-violet-600/10' },
-          { label: 'Passed Filters', key: 'candidate', icon: CheckCircle2, color: 'text-emerald-400 bg-emerald-600/10' },
-          { label: 'Filtered Out', key: 'filtered', icon: XCircle, color: 'text-red-400 bg-red-600/10' },
-          { label: 'Bought', key: 'buy', icon: TrendingUp, color: 'text-blue-400 bg-blue-600/10' },
-        ].map(({ label, key, icon: Icon, color }) => (
-          <div key={label} className="rounded-lg border border-surface-border bg-surface-card p-3 flex items-center gap-3">
-            <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${color.split(' ')[1]}`}>
-              <Icon className={`h-4 w-4 ${color.split(' ')[0]}`} />
+        {STAT_ITEMS.map(({ label, key, icon: Icon, color, iconColor }) => (
+          <div key={label} className="rounded-xl p-3 flex items-center gap-3" style={{background:'#17171d', border:'1px solid #2a2a38'}}>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{background:color}}>
+              <Icon size={15} color={iconColor} />
             </div>
             <div>
-              <p className="text-xs text-slate-600">{label}</p>
-              {loading ? <Skeleton className="h-5 w-8 mt-0.5" /> : (
-                <p className="text-lg font-semibold font-mono text-slate-100">
-                  {key === null ? total24h : (breakdownMap[key] ?? 0)}
-                </p>
-              )}
+              <p className="text-xs" style={{color:'#71717a'}}>{label}</p>
+              {loading
+                ? <Skeleton className="h-5 w-10 mt-0.5" />
+                : <p className="text-xl font-bold font-mono" style={{color:'#f4f4f8'}}>{key === null ? total24h : (breakdownMap[key] ?? 0)}</p>
+              }
             </div>
           </div>
         ))}
       </div>
 
-      {/* Candidates table */}
+      {/* Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-violet-400" />
+            <Filter size={13} color="#a78bfa" />
             Recent Candidates
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-4 space-y-2">
-              {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-            </div>
+            <div className="p-4 space-y-2">{[...Array(7)].map((_, i) => <Skeleton key={i} className="h-11 w-full" />)}</div>
           ) : candidates.length === 0 ? (
-            <div className="py-12 text-center text-slate-600 text-sm">No candidates yet</div>
+            <div className="py-12 text-center text-sm" style={{color:'#52525b'}}>No candidates yet</div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow data-no-hover="true">
                   <TableHead>Token</TableHead>
-                  <TableHead>Route</TableHead>
-                  <TableHead>Market Cap</TableHead>
-                  <TableHead>Holders</TableHead>
+                  <TableHead className="hidden sm:table-cell">Route</TableHead>
+                  <TableHead>MCap</TableHead>
+                  <TableHead className="hidden md:table-cell">Holders</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Filters</TableHead>
+                  <TableHead className="hidden lg:table-cell">Filters</TableHead>
                   <TableHead>Age</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -153,54 +138,47 @@ export default function ScreeningPage() {
                       onClick={() => setExpanded(expanded === c.id ? null : c.id)}
                     >
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-mono font-medium text-slate-200 text-sm">
-                            {c.token?.symbol || shortMint(c.mint)}
-                          </span>
-                          <span className="font-mono text-xs text-slate-600">{shortMint(c.mint)}</span>
+                        <div>
+                          <div className="font-mono font-semibold text-sm" style={{color:'#e4e4f0'}}>{c.token?.symbol || shortMint(c.mint)}</div>
+                          <div className="font-mono text-xs" style={{color:'#52525b'}}>{shortMint(c.mint)}</div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <SignalRouteBadge route={c.signals?.route} />
+                      <TableCell className="hidden sm:table-cell">
+                        <RouteBadge route={c.signals?.route} />
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono text-xs text-slate-400">
+                        <span className="font-mono text-xs" style={{color:'#a1a1aa'}}>
                           {formatUsd(c.metrics?.marketCapUsd || c.metrics?.graduatedMarketCapUsd)}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-xs text-slate-400">
-                          {c.holders?.count ?? '—'}
-                        </span>
+                      <TableCell className="hidden md:table-cell">
+                        <span className="font-mono text-xs" style={{color:'#a1a1aa'}}>{c.holders?.count ?? '—'}</span>
                       </TableCell>
                       <TableCell><StatusBadge status={c.status} /></TableCell>
-                      <TableCell><FilterResult filters={c.filters} /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><FilterResult filters={c.filters} /></TableCell>
                       <TableCell>
-                        <span className="text-xs text-slate-600">{formatAge(c.createdAtMs)}</span>
+                        <span className="text-xs" style={{color:'#71717a'}}>{formatAge(c.createdAtMs)}</span>
                       </TableCell>
                       <TableCell>
                         <a href={solscanUrl(c.mint)} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <ExternalLink className="h-3 w-3 text-slate-600" />
+                          <Button variant="ghost" size="icon" style={{width:28,height:28}}>
+                            <ExternalLink size={11} color="#52525b" />
                           </Button>
                         </a>
                       </TableCell>
                     </TableRow>
                     {expanded === c.id && c.filters?.reasons?.length > 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="bg-surface-hover/30">
-                          <div className="py-1 space-y-1">
-                            <p className="text-xs font-medium text-slate-500 mb-1.5">Filter results:</p>
+                        <TableCell colSpan={8} style={{background:'rgba(30,30,39,0.8)'}}>
+                          <div className="py-1">
+                            <p className="text-xs font-medium mb-1.5" style={{color:'#71717a'}}>Filter results:</p>
                             <div className="flex flex-wrap gap-1.5">
                               {c.filters.reasons.map((r, i) => (
-                                <span key={i} className="inline-flex items-center gap-1 rounded px-2 py-0.5 bg-red-600/10 border border-red-600/20 text-xs text-red-300">
-                                  <XCircle className="h-2.5 w-2.5" />{r}
+                                <span key={i} className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs" style={{background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', color:'#fca5a5'}}>
+                                  <XCircle size={10} />{r}
                                 </span>
                               ))}
                             </div>
-                            {c.filters.strategy && (
-                              <p className="text-xs text-slate-600 mt-1">Strategy: {c.filters.strategy}</p>
-                            )}
                           </div>
                         </TableCell>
                       </TableRow>

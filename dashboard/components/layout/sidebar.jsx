@@ -1,65 +1,160 @@
 'use client';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard,
-  TrendingUp,
-  Search,
-  Settings,
-  Zap,
-  Activity,
-  ChevronRight,
+  LayoutDashboard, TrendingUp, Search, Settings, Zap, Activity, X, Menu,
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/overview', label: 'Overview', icon: LayoutDashboard },
-  { href: '/positions', label: 'Positions', icon: TrendingUp },
-  { href: '/screening', label: 'Screening', icon: Search },
-  { href: '/strategies', label: 'Strategies', icon: Zap },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/overview',   label: 'Overview',    icon: LayoutDashboard },
+  { href: '/positions',  label: 'Positions',   icon: TrendingUp },
+  { href: '/screening',  label: 'Screening',   icon: Search },
+  { href: '/strategies', label: 'Strategies',  icon: Zap },
+  { href: '/settings',   label: 'Settings',    icon: Settings },
 ];
+
+function NavLink({ href, label, icon: Icon, active, onClick }) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        fontSize: '13.5px',
+        fontWeight: active ? '600' : '400',
+        textDecoration: 'none',
+        transition: 'all 0.15s',
+        color: active ? '#a78bfa' : '#71717a',
+        background: active ? 'rgba(139,92,246,0.12)' : 'transparent',
+        border: active ? '1px solid rgba(139,92,246,0.2)' : '1px solid transparent',
+      }}
+    >
+      <Icon size={15} color={active ? '#a78bfa' : '#52525b'} />
+      {label}
+    </Link>
+  );
+}
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
-  return (
-    <aside className="flex h-screen w-52 flex-col border-r border-surface-border bg-[#0b0b12]">
-      <div className="flex items-center gap-2.5 px-4 py-4 border-b border-surface-border">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-600/20 border border-violet-600/30">
-          <Activity className="h-4 w-4 text-violet-400" />
+  useEffect(() => { setOpen(false); }, [pathname]);
+
+  const sidebarContent = (
+    <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
+      {/* Logo */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px', borderBottom: '1px solid #2a2a38',
+      }}>
+        <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+          <div style={{
+            width: 30, height: 30, borderRadius: 8,
+            background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Activity size={15} color="#a78bfa" />
+          </div>
+          <div>
+            <div style={{fontSize:14, fontWeight:700, color:'#f4f4f8', letterSpacing:'-0.01em'}}>Charon</div>
+            <div style={{fontSize:11, color:'#52525b'}}>Solana Bot</div>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-semibold text-slate-100">Charon</p>
-          <p className="text-xs text-slate-600">Solana Bot</p>
-        </div>
+        {/* Mobile close */}
+        <button
+          onClick={() => setOpen(false)}
+          className="lg:hidden"
+          style={{
+            background:'none', border:'none', cursor:'pointer', padding:4,
+            color:'#71717a', display:'flex', alignItems:'center',
+          }}
+        >
+          <X size={18} />
+        </button>
       </div>
 
-      <nav className="flex flex-col gap-0.5 p-2 flex-1">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + '/');
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-all group',
-                active
-                  ? 'bg-violet-600/15 text-violet-300 border border-violet-600/20'
-                  : 'text-slate-500 hover:bg-surface-hover hover:text-slate-300'
-              )}
-            >
-              <Icon className={cn('h-4 w-4', active ? 'text-violet-400' : 'text-slate-600 group-hover:text-slate-400')} />
-              <span>{label}</span>
-              {active && <ChevronRight className="ml-auto h-3 w-3 text-violet-500" />}
-            </Link>
-          );
-        })}
+      {/* Nav */}
+      <nav style={{flex:1, padding:'8px', display:'flex', flexDirection:'column', gap:'2px'}}>
+        {navItems.map(item => (
+          <NavLink
+            key={item.href}
+            {...item}
+            active={pathname === item.href || pathname.startsWith(item.href + '/')}
+            onClick={() => setOpen(false)}
+          />
+        ))}
       </nav>
 
-      <div className="p-3 border-t border-surface-border">
-        <p className="text-xs text-slate-700 text-center">v1.0.0</p>
+      {/* Footer */}
+      <div style={{padding:'12px 16px', borderTop:'1px solid #2a2a38'}}>
+        <div style={{fontSize:11, color:'#3f3f46', textAlign:'center'}}>v1.0.0</div>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile hamburger */}
+      <button
+        onClick={() => setOpen(true)}
+        className="lg:hidden"
+        style={{
+          position: 'fixed', top: 12, left: 12, zIndex: 50,
+          background: '#17171d', border: '1px solid #2a2a38',
+          borderRadius: 8, padding: '6px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#a1a1aa',
+        }}
+      >
+        <Menu size={18} />
+      </button>
+
+      {/* Mobile overlay */}
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 40,
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)',
+          }}
+          className="lg:hidden"
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <aside
+        className="lg:hidden"
+        style={{
+          position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 45,
+          width: 220,
+          background: '#17171d',
+          borderRight: '1px solid #2a2a38',
+          transform: open ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.2s ease',
+        }}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside
+        className="hidden lg:flex"
+        style={{
+          width: 210, flexShrink: 0,
+          flexDirection: 'column',
+          background: '#17171d',
+          borderRight: '1px solid #2a2a38',
+          height: '100vh',
+        }}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }

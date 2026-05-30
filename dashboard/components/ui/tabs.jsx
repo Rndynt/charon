@@ -7,26 +7,27 @@ export const Tabs = TabsPrimitive.Root;
 export function TabsList({ className, ...props }) {
   return (
     <TabsPrimitive.List
-      className={cn(
-        'inline-flex items-center gap-0.5 rounded-lg bg-surface-card border border-surface-border p-0.5',
-        className
-      )}
+      className={cn('inline-flex items-center gap-1 rounded-xl p-1', className)}
+      style={{ background: '#17171d', border: '1px solid #2a2a38' }}
       {...props}
     />
   );
 }
 
-export function TabsTrigger({ className, ...props }) {
+export function TabsTrigger({ className, children, ...props }) {
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        'inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium text-slate-500 transition-all',
+        'inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer select-none',
+        'focus-visible:outline-none',
         'data-[state=active]:bg-violet-600/20 data-[state=active]:text-violet-300',
-        'hover:text-slate-300',
-        className
+        'data-[state=inactive]:text-zinc-500 data-[state=inactive]:hover:text-zinc-300',
+        className,
       )}
       {...props}
-    />
+    >
+      {children}
+    </TabsPrimitive.Trigger>
   );
 }
 
