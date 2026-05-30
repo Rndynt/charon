@@ -1,0 +1,55 @@
+modules = ["nodejs-20"]
+[agent]
+expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
+
+[nix]
+channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+TRADING_MODE = "dry_run"
+GMGN_ENABLED = "false"
+ENABLE_LLM = "true"
+LLM_BASE_URL = "https://api.minimax.io/v1"
+LLM_MODEL = "MiniMax-M2.7"
+LLM_TIMEOUT_MS = "60000"
+LLM_CANDIDATE_PICK_COUNT = "10"
+LLM_CANDIDATE_MAX_AGE_MS = "600000"
+SIGNAL_SERVER_URL = "https://api.thecharon.xyz/api"
+SIGNAL_POLL_MS = "30000"
+JUPITER_SWAP_BASE_URL = "https://api.jup.ag/swap/v2"
+LIVE_MIN_SOL_RESERVE = "0.02"
+POSITION_CHECK_MS = "10000"
+GRADUATED_POLL_MS = "30000"
+GRADUATED_LOOKBACK_MS = "7200000"
+TRENDING_POLL_MS = "60000"
+TRENDING_LOOKBACK_MS = "600000"
+DB_PATH = "./charon.sqlite"
+MAX_OPEN_POSITIONS = "3"
+GMGN_REQUEST_DELAY_MS = "2500"
+GMGN_MAX_RETRIES = "2"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm start"
+
+[workflows.workflow.metadata]
+outputType = "console"
