@@ -1,5 +1,10 @@
 import Database from 'better-sqlite3';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { DB_PATH } from '../config.js';
+
+const dbDir = dirname(DB_PATH);
+if (dbDir && dbDir !== '.') mkdirSync(dbDir, { recursive: true });
 
 export const db = new Database(DB_PATH);
 
