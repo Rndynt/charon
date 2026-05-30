@@ -5,16 +5,33 @@
   "private": true,
   "scripts": {
     "start": "node index.js",
+    "dashboard": "next dev dashboard --port 5000",
     "check": "node --check index.js && node --check src/app.js && node --check src/config.js && node --check src/liveExecutor.js",
     "test": "node --test"
   },
   "dependencies": {
+    "@radix-ui/react-select": "^2.1.0",
+    "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-tooltip": "^1.1.0",
     "@solana/web3.js": "^1.98.4",
+    "autoprefixer": "^10.4.20",
     "axios": "^1.7.9",
     "better-sqlite3": "^12.9.0",
     "bs58": "^6.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
+    "lucide-react": "^0.468.0",
+    "next": "^14.2.29",
     "node-telegram-bot-api": "^0.66.0",
+    "postcss": "^8.4.49",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.5",
+    "tailwindcss": "^3.4.16",
     "ws": "^8.18.0"
   }
 }

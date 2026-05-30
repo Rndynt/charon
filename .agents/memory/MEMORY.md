@@ -1,0 +1,2 @@
+- [Next.js subdirectory CSS loading](nextjs-subdir-css.md) — CSS loaders fail when Next.js runs from a subdirectory without its own node_modules; use Tailwind CDN in layout instead.
+- [Charon DB path](charon-db-path.md) — Bot uses DB_PATH env var = ./data/charon.sqlite, NOT ./charon.sqlite; dashboard lib/db.js must resolve via DB_PATH env var.

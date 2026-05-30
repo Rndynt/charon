@@ -1,0 +1,13 @@
+{
+  "/strategies/page": "app/strategies/page.js",
+  "/screening/page": "app/screening/page.js",
+  "/settings/page": "app/settings/page.js",
+  "/api/stats/route": "app/api/stats/route.js",
+  "/api/decisions/route": "app/api/decisions/route.js",
+  "/api/settings/route": "app/api/settings/route.js",
+  "/overview/page": "app/overview/page.js",
+  "/positions/page": "app/positions/page.js",
+  "/api/candidates/route": "app/api/candidates/route.js",
+  "/api/positions/route": "app/api/positions/route.js",
+  "/api/strategies/route": "app/api/strategies/route.js"
+}
