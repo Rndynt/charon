@@ -4,7 +4,7 @@ import { fetchGmgnTokenInfo } from '../enrichment/gmgn.js';
 import { fetchJupiterAsset, fetchJupiterHolders, fetchJupiterChartContext } from '../enrichment/jupiter.js';
 import { fetchSavedWalletExposure } from '../enrichment/wallets.js';
 import { fetchTwitterNarrative } from '../enrichment/twitter.js';
-import { gmgnLink } from '../format.js';
+import { gmgnLink, signalLabel } from '../format.js';
 
 export function buildFeeSnapshot(fee, signature) {
   return {
@@ -17,14 +17,6 @@ export function buildFeeSnapshot(fee, signature) {
       percent: holder.bps / 100,
     })),
   };
-}
-
-export function signalLabel(signals = {}) {
-  return [
-    signals.hasFeeClaim ? 'fees' : null,
-    signals.hasGraduated ? 'graduated' : null,
-    signals.hasTrending ? 'trending' : null,
-  ].filter(Boolean).join(' + ') || signals.route || 'unknown';
 }
 
 export function filterCandidate(candidate) {
@@ -117,10 +109,12 @@ export function filterCandidate(candidate) {
 
 export async function buildCandidate({ mint, fee = null, signature = null, graduatedCoin = null, trendingToken = null, route }) {
   const strat = activeStrategy();
-  const gmgn = await fetchGmgnTokenInfo(mint);
-  const jupiterAsset = await fetchJupiterAsset(mint);
-  const holders = await fetchJupiterHolders(mint);
-  const chart = await fetchJupiterChartContext(mint);
+  const [gmgn, jupiterAsset, holders, chart] = await Promise.all([
+    fetchGmgnTokenInfo(mint),
+    fetchJupiterAsset(mint),
+    fetchJupiterHolders(mint),
+    fetchJupiterChartContext(mint),
+  ]);
   const savedWalletExposure = await fetchSavedWalletExposure(mint, holders);
   const twitterNarrative = await fetchTwitterNarrative(graduatedCoin || jupiterAsset, gmgn);
   const priceUsd = firstPositiveNumber(tokenPriceFromGmgn(gmgn), jupiterAsset?.usdPrice, trendingToken?.price);

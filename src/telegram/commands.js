@@ -25,10 +25,12 @@ import { sendTelegram, sendBatch, sendPositionOpen } from './send.js';
 import { candidateSummary, formatPosition } from './format.js';
 import { refreshPosition } from '../execution/positions.js';
 import { executeLiveSell } from '../execution/router.js';
-import { handleCallback, editMenuMessage } from './callbacks.js';
+import { handleCallback } from './callbacks.js';
 import { consumeNumericFilterInput } from './input.js';
 import { runLearning, sendLessons } from '../learning/commands.js';
-import { fetchWalletPnl } from '../enrichment/wallets.js';
+import { fetchWalletPnl, savedWallets } from '../enrichment/wallets.js';
+import { editMenuMessage } from './ui.js';
+import { allPositions } from '../db/positions.js';
 
 const PROFILE_PRESETS = {
   conservative: {
@@ -446,12 +448,4 @@ async function sendPnl(chatId, query = null) {
 function parseSetFilter(text) {
   const parts = text.trim().split(/\s+/);
   return { key: parts[1], value: parts[2] };
-}
-
-function allPositions(limit = 10) {
-  return db.prepare('SELECT * FROM dry_run_positions ORDER BY id DESC LIMIT ?').all(limit);
-}
-
-function savedWallets() {
-  return db.prepare('SELECT * FROM saved_wallets ORDER BY label').all();
 }

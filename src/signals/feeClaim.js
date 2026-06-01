@@ -67,10 +67,14 @@ export function startWebsocket() {
   const wsUrl = SOLANA_WS_URL;
   let ws;
   let pingTimer;
+  let reconnectDelay = 5000;
+  const MAX_RECONNECT_DELAY = 60_000;
+
   function connect() {
     ws = new WebSocket(wsUrl);
     ws.on('open', () => {
       console.log('[ws] connected');
+      reconnectDelay = 5000; // Reset backoff on successful connection
       for (const [id, program] of [[1, PUMP_PROGRAM], [2, PUMP_AMM]]) {
         ws.send(JSON.stringify({
           jsonrpc: '2.0',
@@ -97,10 +101,12 @@ export function startWebsocket() {
     });
     ws.on('close', () => {
       clearInterval(pingTimer);
-      console.log('[ws] closed, reconnecting in 5s');
-      setTimeout(connect, 5000);
+      console.log(`[ws] closed, reconnecting in ${Math.round(reconnectDelay / 1000)}s`);
+      setTimeout(connect, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
     });
     ws.on('error', error => console.log(`[ws] ${error.message}`));
   }
   connect();
+  return { getWs: () => ws };
 }

@@ -106,6 +106,7 @@ export async function refreshCandidateForExecution(row) {
 }
 
 const sellInProgress = new Set();
+let monitorInProgress = false;
 
 export async function refreshPosition(position, { autoExit = true, jupiterPnl = null } = {}) {
   const asset = await fetchJupiterAsset(position.mint);
@@ -238,20 +239,26 @@ export async function refreshPosition(position, { autoExit = true, jupiterPnl = 
 }
 
 export async function monitorPositions() {
-  const positions = openPositions();
-  let walletPnlData = {};
-  const pubkey = liveWalletPubkey();
-  if (pubkey && positions.some(p => p.execution_mode === 'live')) {
-    walletPnlData = await fetchJupiterWalletPnl(pubkey);
-  }
-  for (const position of positions) {
-    const jupiterPnl = position.execution_mode === 'live'
-      ? (walletPnlData[position.mint]?.pnl || null)
-      : null;
-    const result = await refreshPosition(position, { autoExit: true, jupiterPnl }).catch((err) => {
-      console.log(`[position] ${position.id} ${err.message}`);
-      return null;
-    });
-    if (result?.exitReason) await sendPositionExit(result);
+  if (monitorInProgress) return;
+  monitorInProgress = true;
+  try {
+    const positions = openPositions();
+    let walletPnlData = {};
+    const pubkey = liveWalletPubkey();
+    if (pubkey && positions.some(p => p.execution_mode === 'live')) {
+      walletPnlData = await fetchJupiterWalletPnl(pubkey);
+    }
+    for (const position of positions) {
+      const jupiterPnl = position.execution_mode === 'live'
+        ? (walletPnlData[position.mint]?.pnl || null)
+        : null;
+      const result = await refreshPosition(position, { autoExit: true, jupiterPnl }).catch((err) => {
+        console.log(`[position] ${position.id} ${err.message}`);
+        return null;
+      });
+      if (result?.exitReason) await sendPositionExit(result);
+    }
+  } finally {
+    monitorInProgress = false;
   }
 }

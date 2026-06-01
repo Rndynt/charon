@@ -128,9 +128,14 @@ export async function fetchServerSignals() {
       let fee = null;
       let signature = null;
       if (signal.feeClaim) {
+        const distributedSol = Number(signal.feeClaim.distributedSol);
+        if (!Number.isFinite(distributedSol) || distributedSol < 0) {
+          processed++;
+          continue;
+        }
         fee = {
           mint,
-          distributed: BigInt(Math.floor(signal.feeClaim.distributedSol * 1e9)),
+          distributed: BigInt(Math.floor(distributedSol * 1e9)),
           shareholders: (signal.feeClaim.shareholders || []).map(h => ({
             pubkey: h.address,
             bps: h.bps,

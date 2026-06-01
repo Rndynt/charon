@@ -35,3 +35,11 @@ export function txLink(signature) {
 export function accountLink(address) {
   return `https://solscan.io/account/${address}`;
 }
+
+export function signalLabel(signals = {}) {
+  return [
+    signals.hasFeeClaim ? 'fees' : null,
+    signals.hasGraduated ? 'graduated' : null,
+    signals.hasTrending ? 'trending' : null,
+  ].filter(Boolean).join(' + ') || signals.route || 'unknown';
+}

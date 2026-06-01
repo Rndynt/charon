@@ -11,6 +11,7 @@ import {
   strategyMenuText,
   strategyNumericLabels,
 } from './menus.js';
+import { editMenuMessage } from './ui.js';
 
 export const pendingNumericInputs = new Map();
 
@@ -99,32 +100,4 @@ export async function consumeNumericFilterInput(chatId, text, userMessageId = nu
     }
   }
   return true;
-}
-
-async function editMenuMessage(query, text, extra = {}) {
-  const chatId = query.message?.chat?.id || TELEGRAM_CHAT_ID;
-  const messageId = query.message?.message_id;
-  if (!messageId) {
-    return bot.sendMessage(chatId, text, {
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-      ...extra,
-    });
-  }
-  try {
-    return await bot.editMessageText(text, {
-      chat_id: chatId,
-      message_id: messageId,
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-      ...extra,
-    });
-  } catch (err) {
-    if (/message is not modified/i.test(err.message)) return null;
-    return bot.sendMessage(chatId, text, {
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-      ...extra,
-    });
-  }
 }
