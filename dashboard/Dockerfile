@@ -4,15 +4,15 @@ WORKDIR /app
 # Install native build deps for better-sqlite3
 RUN apk add --no-cache python3 make g++
 
-# Dependencies
+# Dependencies - COPY from dashboard subdir since build context is repo root
 FROM base AS deps
-COPY package.json package-lock.json* ./
+COPY dashboard/package.json dashboard/package-lock.json* ./
 RUN npm ci
 
 # Build
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY dashboard/ ./
 RUN npm run build
 
 # Production
