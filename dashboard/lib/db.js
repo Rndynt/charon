@@ -13,10 +13,9 @@ let _db = null;
 
 export function getDb() {
   if (!_db) {
-    _db = new Database(DB_FILE);
+    _db = new Database(DB_FILE, { readonly: true, fileMustExist: true });
     _db.pragma('journal_mode = WAL');
     _db.pragma('busy_timeout = 5000');
-    _db.pragma('readonly = true');
   }
   return _db;
 }
