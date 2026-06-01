@@ -11,3 +11,5 @@ node_modules/
 npm-debug.log*
 
 ARCHITECTURE.md
+dashboard/.next/
+dashboard/node_modules/

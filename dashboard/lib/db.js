@@ -5,10 +5,9 @@ import path from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// DB_PATH env var is set to ./data/charon.sqlite (relative to project root)
-const DB_FILE = process.env.DB_PATH
-  ? path.resolve(__dirname, '../../', process.env.DB_PATH)
-  : path.resolve(__dirname, '../../data/charon.sqlite');
+// In container: /app/data/charon.sqlite (volume mount)
+// Local dev: ../../data/charon.sqlite relative to lib/
+const DB_FILE = process.env.DB_PATH || path.resolve(__dirname, '../../data/charon.sqlite');
 
 let _db = null;
 
@@ -17,6 +16,7 @@ export function getDb() {
     _db = new Database(DB_FILE);
     _db.pragma('journal_mode = WAL');
     _db.pragma('busy_timeout = 5000');
+    _db.pragma('readonly = true');
   }
   return _db;
 }
